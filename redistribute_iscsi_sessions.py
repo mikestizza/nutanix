@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 """
 Copyright (c) 2020 Nutanix Inc. All rights reserved.
 
@@ -111,7 +111,7 @@ def get_stargate_master_ip():
   """
   rv, stdout, stderr = run_command("links -dump http://0:2009 | grep master")
   if rv:
-    print("Failed to find stargate master IP. exiting")
+    print "Failed to find stargate master IP. exiting"
     sys.exit(1)
   ip = stdout.strip().split()[3]
   ip = ip.split("]")[1]
@@ -133,9 +133,7 @@ def get_vg_target_name(vg_name):
     print("Failed to get details of VG %s. Error: %s" % (vg_name, stdout))
     sys.exit(1)
 
-  # Fixed dictionary keys access for Python 3
-  first_key = list(vg_data["data"].keys())[0]
-  return vg_data["data"][first_key]["iscsi_target_name"]
+  return vg_data["data"][vg_data["data"].keys()[0]]["iscsi_target_name"]
 
 def run_command(cmd):
   """
@@ -147,9 +145,6 @@ def run_command(cmd):
   proc = subprocess.Popen(
     cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
   out, err = proc.communicate()
-  # Decode bytes to string for Python 3
-  out = out.decode('utf-8') if out else ""
-  err = err.decode('utf-8') if err else ""
   return proc.returncode, out, err
 
 def get_preferred_svm_id(base_target_name, targetname, zeus_config):
@@ -172,13 +167,13 @@ def get_preferred_svm_id(base_target_name, targetname, zeus_config):
 def main(argv):
   try:
     argv = FLAGS(argv)
-  except gflags.FlagsError as err:  # Python 3 exception syntax
-    print("%s\nUsage: %s ARGS\n%s" % (err, argv[0], FLAGS))
+  except gflags.FlagsError, err:
+    print "%s\nUsage: %s ARGS\n%s" % (err, argv[0], FLAGS)
     sys.exit(1)
 
   if not FLAGS.vg_name:
-    print("Please pass the name of the VG")
-    print("\nUsage: %s ARGS\n%s" % (argv[0], FLAGS))
+    print "Please pass the name of the VG"
+    print "\nUsage: %s ARGS\n%s" % (argv[0], FLAGS)
     sys.exit(1)
 
   vg_target_name = get_vg_target_name(FLAGS.vg_name)
@@ -191,18 +186,17 @@ def main(argv):
       if vg_target_name in target["name"]:
         target_src_svm_id[target["name"]] = node.service_vm_id
 
-  # Python 3 compatible iteration
-  for target, src_svm_id in target_src_svm_id.items():
+  for target, src_svm_id in target_src_svm_id.iteritems():
     dest_svm_id = get_preferred_svm_id(vg_target_name, target, zeus_config)
     if src_svm_id == dest_svm_id:
-      print("Target %s already on %s. Skipping" % (target, dest_svm_id))
+      print "Target %s already on %s. Skipping" % (target, dest_svm_id)
       continue
     if not FLAGS.dry_run:
       migrate_iscsi_target(target, src_svm_id, dest_svm_id, stargate_master_ip)
     else:
-      print("(Dry run) Migrating %s to %s" % (target, dest_svm_id))
+      print "(Dry run) Migrating %s to %s" % (target, dest_svm_id)
 
-  print("Migrations done")
+  print "Migrations done"
 
 if __name__ == "__main__":
   main(sys.argv)
